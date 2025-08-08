@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.12.0
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+    networks:
+      - graylog
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    networks:
+      - graylog
+
+  graylog:
+    image: graylog/graylog:6.0
+    container_name: graylog
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=supersecret
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_EXTERNAL_URI=http://localhost:9000/
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
+    depends_on:
+      - mongodb
+      - opensearch
+    ports:
+      - "9000:9000"
+    networks:
+      - graylog
+
+  log-simulator:
+    image: alpine
+    container_name: log-simulator
+    command: tail -f /dev/null
+    networks:
+      - graylog
+
+  rule-generator:
+    image: alpine
+    container_name: rule-generator
+    command: tail -f /dev/null
+    networks:
+      - graylog
+
+networks:
+  graylog:
+    driver: bridge
