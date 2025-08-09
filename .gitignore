@@ -1,0 +1,28 @@
+# -------------------------------
+# Graylog / Opensearch / MongoDB persistence
+# -------------------------------
+# Graylog runtime/journal data
+data/graylog/journal/
+
+# Graylog runtime config data
+# (Uncomment if you want to exclude the persisted graylog.conf)
+# data/graylog/config/
+
+# MongoDB data
+data/mongodb/
+
+# OpenSearch / Elasticsearch data
+data/opensearch/
+
+# -------------------------------
+# Docker-related files (optional)
+# -------------------------------
+# Anonymous Docker volumes cache
+**/.docker/
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
