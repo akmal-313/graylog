@@ -1,5 +1,5 @@
 {
-  "title": "My GELF HTTP Input",
+  "title": "GELF_HTTP_Input",
   "type": "org.graylog2.inputs.gelf.http.GELFHttpInput",
   "configuration": {
     "bind_address": "0.0.0.0",

@@ -1,0 +1,18 @@
+{
+  "title": "GELF_HTTP_Input_Stream",
+  "description": "Stream for messages from the GELF HTTP input",
+  "remove_matches_from_default_stream": false,
+  "disabled": false,
+  "matching_type": "AND",
+  "rules": [
+    {
+      "field": "input",
+      "type": 1,
+      "value": "GELF_HTTP_Input",
+      "inverted": false
+    }
+  ],
+  "alert_conditions": [],
+  "outputs": [],
+  "is_default": false
+}

@@ -26,3 +26,4 @@ data/opensearch/
 # Python cache
 __pycache__/
 *.pyc
+config/graylog/config.log
