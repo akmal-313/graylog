@@ -2,48 +2,104 @@ version: '3.8'
 
 services:
   opensearch:
-    image: opensearchproject/opensearch:2.12.0
+    image: "opensearchproject/opensearch:2.15.0"
     container_name: opensearch
     environment:
-      - discovery.type=single-node
-      - plugins.security.disabled=true
-      - bootstrap.memory_lock=true
-      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "bootstrap.memory_lock=true"
+      - "discovery.type=single-node"
+      - "action.auto_create_index=false"
+      - "plugins.security.ssl.http.enabled=false"
+      - "plugins.security.disabled=true"
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=+_8r#wliY3Pv5-HMIf4qzXImYzZf-M=M"
     ulimits:
       memlock:
         soft: -1
         hard: -1
     ports:
       - "9200:9200"
+    restart: "on-failure"
     networks:
       - graylog
+    volumes:
+      - "./data/opensearch:/usr/share/opensearch/data"  
 
   mongodb:
-    image: mongo:6.0
-    container_name: mongodb
+    image: "mongo:6.0.18"
+    ports:
+      - "27017:27017"   
+    restart: "on-failure"
     networks:
       - graylog
+    volumes:
+      - "./data/mongodb:/data/db"
+      - "./config/mongodb:/data/configdb"  
+
 
   graylog:
-    image: graylog/graylog:6.0
+    image: graylog/graylog:6.1
     container_name: graylog
-    environment:
-      - GRAYLOG_PASSWORD_SECRET=supersecret
-      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
-      - GRAYLOG_HTTP_EXTERNAL_URI=http://localhost:9000/
-      - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
     depends_on:
-      - mongodb
-      - opensearch
+      mongodb:
+        condition: "service_started"
+      opensearch:
+        condition: "service_started"
+    entrypoint: "/usr/bin/tini -- wait-for-it opensearch:9200 -- /docker-entrypoint.sh"
+    environment:
+      GRAYLOG_NODE_ID_FILE: "/usr/share/graylog/data/config/node-id"
+      GRAYLOG_HTTP_BIND_ADDRESS: "0.0.0.0:9000"
+      GRAYLOG_ELASTICSEARCH_HOSTS: "http://opensearch:9200"
+      GRAYLOG_MONGODB_URI: "mongodb://mongodb:27017/graylog"
+      GRAYLOG_REPORT_DISABLE_SANDBOX: "true"
+      # CHANGE ME (must be at least 16 characters)!
+      GRAYLOG_PASSWORD_SECRET: "5dfb167a9c873fc4bb8a81f6f2ab"
+      # Password: "admin"
+      GRAYLOG_ROOT_PASSWORD_SHA2: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+      GRAYLOG_HTTP_EXTERNAL_URI: "http://127.0.0.1:9000/"    
     ports:
-      - "9000:9000"
+      # Graylog web interface and REST API
+      - "9000:9000/tcp"
+      # Beats
+      - "5044:5044/tcp"
+      # Syslog TCP
+      - "5140:5140/tcp"
+      # Syslog UDP
+      - "5140:5140/udp"
+      # GELF TCP
+      - "12201:12201/tcp"
+      # GELF UDP
+      - "12201:12201/udp"
+      # GELF HTTP
+      - "12202:12202/tcp"
+      # Forwarder data
+      - "13301:13301/tcp"
+      # Forwarder config
+      - "13302:13302/tcp"
+    restart: "on-failure"
+    networks:
+      - graylog
+    volumes:
+      - ./data/graylog/journal:/usr/share/graylog/data/journal
+      - ./data/graylog/config:/usr/share/graylog/data/config      
+
+  log-sender-simulator:
+    container_name: log-sender-simulator
+    build:
+      context: ./log_sender
+      dockerfile: Dockerfile
+    command: tail -f /dev/null
     networks:
       - graylog
 
-  log-simulator:
-    image: alpine
-    container_name: log-simulator
-    command: tail -f /dev/null
+  log-receiver-simulator:
+    container_name: log-receiver-simulator
+    build:
+      context: ./log_receiver
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./log_receiver/data:/app/data 
     networks:
       - graylog
 
@@ -53,6 +109,7 @@ services:
     command: tail -f /dev/null
     networks:
       - graylog
+
 
 networks:
   graylog:
